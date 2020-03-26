@@ -154,12 +154,22 @@ namespace kanimal_cli
                     Directory.CreateDirectory(o.OutputPath);
                     Utilities.Dump =
                         new StreamWriter(new FileStream(Path.Join(o.OutputPath, "dump.log"), FileMode.Create));
-                    var reader = new KanimReader(
-                        new FileStream(build, FileMode.Open),
-                        new FileStream(anim, FileMode.Open),
-                        new FileStream(png, FileMode.Open));
-                    reader.Read();
-                    Utilities.Dump.Flush();
+                    // special case when the anim lacks a corresponding build (probably only useful for interaction anims)
+                    if (png == null && build == null && anim != null)
+                    {
+                        var reader = new KanimReader(new FileStream(anim, FileMode.Open));
+                        reader.ReadAnimData();
+                        Utilities.Dump.Flush();
+                    }
+                    else
+                    {
+                        var reader = new KanimReader(
+                            new FileStream(build, FileMode.Open),
+                            new FileStream(anim, FileMode.Open),
+                            new FileStream(png, FileMode.Open));
+                                                reader.Read();
+                        Utilities.Dump.Flush();
+                    }
                 })
                 .WithParsed<ScmlToKanimOptions>(o => Convert(
                     "scml",

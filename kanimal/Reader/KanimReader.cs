@@ -24,11 +24,17 @@ namespace kanimal
             try
             {
                 image = new Bitmap(img);
-            } catch (ArgumentException e)
+            }
+            catch (Exception e) when (e is ArgumentException || e is ArgumentNullException)
             {
                 Logger.Fatal("The given \"img\" stream is not a valid image file. Original exception is as follows:");
                 ExceptionDispatchInfo.Capture(e).Throw();
             }
+        }
+
+        public KanimReader(Stream anim)
+        {
+            this.anim = anim;
         }
 
         // Reads the entire build.bytes file
@@ -253,14 +259,11 @@ namespace kanimal
                             Order = reader.ReadSingle()
                         };
 
-                        string plainName;
-                        try
-                        {
+                        string plainName = "(plain name not found)";
+                        // Checking _build != null is only necessary for the special use case of dumping an anim
+                        // file without any corresponding build file.
+                        if (_build != null && BuildHashes.ContainsKey(element.ImageHash))
                             plainName = $"(\"{BuildHashes[element.ImageHash]}\")";
-                        } catch (KeyNotFoundException)
-                        {
-                            plainName = "(plain name not found)";
-                        }
                         Utilities.LogToDump(
                             $"      Sub-element #{element.Index} is {element.ImageHash} {plainName} @ layer {element.Layer}\n" +
                             $"        Matrix: ({element.M1} {element.M2} {element.M3} {element.M4}), translate {element.M5} {element.M6}. Order {element.Order}",
