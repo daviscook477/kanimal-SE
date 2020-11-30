@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "kanimal-cli": {
+      "commandName": "Project",
+      "commandLineArgs": "convert -I scml -O scml C:\\Users\\davis\\Documents\\Spriter_test\\test_scml.scml -ib\\"
+    }
+  }
+}

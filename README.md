@@ -20,7 +20,9 @@ KSE is, at its base, a port of kparserX from Java to C#, and wouldn't have been 
 ## Features
 
 * Multi-directional conversion between compatible formats: kanim → scml, scml → kanim, kanim → kanim, scml → scml are all possible.
-* Support for most Spriter features for making custom ONI animations. Most notably - handles interpolation between keyframes with the `-i` flag.
+* Support for most Spriter features for making custom ONI animations.
+    * Handles interpolation between keyframes with the `-i` flag.
+    * Handles skeletal animation (bones) with the `-b` flag.
 * Cross-platform executable
 * Actively maintained
 
@@ -81,6 +83,7 @@ $ ./kanimal-cli kanim [NAME].scml
 ```
 
 Currently the ability to use Spriter's interpolation between keyframes features is opt-in. To use it you must use the `-i/--interpolate` switch.
+The same is the situation with skeletal animation. If your Spriter project is using bones, you must use the `-b/--debone` switch.
 Just like in the kanim → scml case, the files are output by default into the `output/` directory, and a specific path can be specified with the `-o/--output` switch.
 
 ### Arbitrary directions
@@ -98,6 +101,7 @@ Other available switches are as follows:
 | `-v/--verbose` | Set verbosity level to DEBUG (default INFO)|
 | `-s/--silent` | Set verbosity level to FATAL (default INFO). This means no messages are logged on successful conversion, including warnings. |
 | `-i/--interpolate` | Interpolate SCML files on load. This means that all in-between frames are generated from the keyframes. |
+| `-b/--debone` | Debone SCML files on load/after interpolation. This means that all bones will be removed from the file and the position/rotation of sprites will be made absolute. |
 |`-S/--strict` | Enforce strict conversion.|
 |`-f/--strictly-order-files` | Instead of inferring the file types from the extensions, require that files be provided in png, build, anim order | 
 
@@ -110,6 +114,7 @@ $ kanimal-cli dump [FILES...]
 ## Things to know
 
 ### Spriter
+* Klei's animation system does not do inbetween frame interpolation. The animation you make will play exactly at the snapping interval shown in Spriter. Turning on snapping in Spriter will give you a more accurate visual idea of what the animation will look like.
 * You cannot change the pivot point from frame to frame. However, you *can* change the pivot for the entire sprite from the right side Pallate menu. If you change the pivot point in a specific frame that change will not be respected by the converter. It will throw a warning for you to indicate that this is not allowed. This will be changed to an error in strict conversion mode.
 * Spriter's intrinsic interpolation is supported if you use the `-i/--interpolate` option. Currently the `-i` option works best if you keyframe the start and the end frame. For example if you want a 30 frame animation that you should have length 33ms * 30 = 990ms where you must key 0ms and 990ms in order for interpolation to work. If you have a use case in which providing key frames on the end of animation is not sufficient or where interpolation seems to fail please open an issue.
 * Each sprite must have an underscore and a number at the end of their name, but before the file extension. The number should start at 0 and be sequential. So, if you have three sprites called "blob", they should be respectively named `blob_0.png`, `blob_1.png`, and `blob_2.png`. Each name before the underscore with number is considered an individual *symbol* which means an object of sorts in the animation that can change between sprites. So going with the `blob` example: `blob` would be the symbol and could be switched between any of the three sprites `blob_0`, `blob_1`, `blob_2`. When you want to change what sprite is used in a certain location in your image use symbols and this [link](http://www.brashmonkey.com/spriter_manual/swapping%20the%20image%20of%20a%20sprite.htm) to see how to switch the sprites for that object. This keeps all the sprite changes on just a single timeline rather than needing multiple timelines for a single part just because it has sprite changes.

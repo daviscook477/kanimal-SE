@@ -245,9 +245,13 @@ namespace kanimal
             foreach (var animation in entity.ChildNodes.GetElements())
             {
                 if (animation.Name != "animation")
-                    throw new ProjectParseException(
-                        $"SCML format exception: all children of <entity> should be <animation>, but was <{animation.Name}> instead.");
-
+                {
+                    Logger.Debug("Skipping non-animation child of <entity>");
+                    continue;
+                    // throw new ProjectParseException(
+                    //    $"SCML format exception: all children of <entity> should be <animation>, but was <{animation.Name}> instead.");
+                }
+                    
                 var animName = animation.Attributes["name"].Value;
                 AnimHashes[Utilities.KleiHash(animName)] = animName;
             }
@@ -286,9 +290,14 @@ namespace kanimal
             {
                 animCount++;
                 if (anim.Name != "animation")
-                    throw new ProjectParseException(
-                        $"SCML format exception: all children of <entity> must be <animation>, was <{anim.Name}> instead.");
-
+                {
+                    Logger.Debug("Skipping non-animation child of <entity>");
+                    animCount--;
+                    continue;
+                    // throw new ProjectParseException(
+                    //    $"SCML format exception: all children of <entity> must be <animation>, was <{anim.Name}> instead.");
+                }
+                    
                 var bank = new AnimBank();
                 bank.Name = anim.Attributes["name"].Value;
                 bank.Hash = reverseHash[bank.Name];
@@ -369,8 +378,12 @@ namespace kanimal
                         var object_ref = object_refs[i];
 
                         if (object_ref.Name != "object_ref")
-                            throw new ProjectParseException(
-                                $"SCML format exception: all children of <key> must be <object_ref>, was <{object_ref.Name}> instead.");
+                        {
+                            Logger.Debug("Skipping non-object_ref child of <key>");
+                            continue;
+                            // throw new ProjectParseException(
+                            //    $"SCML format exception: all children of <key> must be <object_ref>, was <{object_ref.Name}> instead.");
+                        }
 
                         var element = new Element();
                         element.Flags = 0;
@@ -632,8 +645,12 @@ namespace kanimal
 
                 var anim = (XmlElement) child;
                 if (anim.Name != "animation")
-                    throw new ProjectParseException(
-                        $"SCML format exception: all children of <entity> must be <animation>, was <{anim.Name}> instead.");
+                {
+                    Logger.Debug("Skipping non-animation child of <entity>");
+                    continue;
+                    //throw new ProjectParseException(
+                    //    $"SCML format exception: all children of <entity> must be <animation>, was <{anim.Name}> instead.");
+                }
 
                 var mainline = anim.GetElementsByTagName("mainline")[0];
                 var keyframes = mainline.ChildNodes;
@@ -662,8 +679,13 @@ namespace kanimal
 
                         var element = (XmlElement) obj;
                         if (element.Name != "object_ref")
-                            throw new ProjectParseException(
-                                $"SCML format exception: all children of <key> should be <object_ref>, was <{element.Name}> instead.");
+                        {
+                            Logger.Debug("Skipping non-object_ref child of <key>");
+                            continue;
+                            // throw new ProjectParseException(
+                            //    $"SCML format exception: all children of <key> should be <object_ref>, was <{element.Name}> instead.");
+                        }
+                            
 
                         if (objects.Count > maxVisibleSymbolFrames) maxVisibleSymbolFrames = objects.Count;
                     }
