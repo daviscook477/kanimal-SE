@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using CommandLine;
 using kanimal;
 using NLog;
@@ -144,6 +145,40 @@ namespace kanimal_cli
             Logger.Info($"Successfully wrote to format {outputFormat}");
         }
 
+        private static void ConvertAnim(Object stateInfo)
+        {
+            ConversionData data = (ConversionData) stateInfo;
+            var png = new FileStream(data.filePath, FileMode.Open);
+            var anim = new FileStream(data.animPath, FileMode.Open);
+            var build = new FileStream(data.buildPath, FileMode.Open);
+
+            bool failed = true;
+            var reader = new KanimReader(build, anim, png);
+            try
+            {
+                reader.Read();
+                var writer = new ScmlWriter(reader);
+                writer.SaveToDir(Path.Join(data.outputPath, reader.BuildData.Name));
+                failed = false;
+            }
+            catch (Exception e)
+            {
+                Logger.Error($"The following error occured while exporting \"{reader.BuildData.Name}\":");
+                Logger.Error(e.ToString());
+                Logger.Error("Skipping.");
+            }
+
+            if (!failed)
+            {
+                Logger.Info($"Exported \"{reader.BuildData.Name}\".");
+            }
+            Interlocked.Decrement(ref Counter);
+            Interlocked.Increment(ref Success);
+        }
+
+        private static int Counter;
+        private static int Success;
+
         private static void Main(string[] args)
         {
             Parser.Default
@@ -203,7 +238,10 @@ namespace kanimal_cli
                         Environment.Exit((int) ExitCodes.IncorrectArguments);
                     }
 
-                    foreach (var filepath in Directory.GetFiles(Path.Join(o.AssetDirectory, "Texture2D"), "*.png"))
+                    Counter = 0;
+                    Success = 0;
+                    var filepaths = Directory.GetFiles(Path.Join(o.AssetDirectory, "Texture2D"), "*.png");
+                    foreach (var filepath in filepaths)
                     {
                         var filename = Path.GetFileName(filepath);
                         var basename = Utilities.GetSpriteBaseName(filename);
@@ -213,44 +251,47 @@ namespace kanimal_cli
                             continue;
                         }
 
-                        var png = new FileStream(filepath, FileMode.Open);
-
                         var animPath = Path.Join(o.AssetDirectory, "TextAsset", $"{basename}_anim.bytes");
                         var buildPath = Path.Join(o.AssetDirectory, "TextAsset", $"{basename}_build.bytes");
                         if (!File.Exists(animPath))
                         {
-                            Logger.Warn(
-                                $"Skipping \"{basename}\" because it does not have a corresponding anim.bytes file.");
-                            continue;
+                            animPath = Path.Join(o.AssetDirectory, "TextAsset", $"{basename}_anim.txt");
+                            if (!File.Exists(animPath))
+                            {
+                                animPath = Path.Join(o.AssetDirectory, "TextAsset", $"{basename}_anim.prefab");
+                                if (!File.Exists(animPath))
+                                {
+                                    Logger.Warn(
+                                    $"Skipping \"{basename}\" because it does not have a corresponding anim.bytes file.");
+                                    continue;
+                                }
+                            }
                         }
 
                         if (!File.Exists(buildPath))
                         {
-                            Logger.Warn(
-                                $"Skipping \"{basename}\" because it does not have a corresponding build.bytes file.");
-                            continue;
+                            buildPath = Path.Join(o.AssetDirectory, "TextAsset", $"{basename}_build.txt");
+                            if (!File.Exists(buildPath))
+                            {
+                                buildPath = Path.Join(o.AssetDirectory, "TextAsset", $"{basename}_build.prefab");
+                                if (!File.Exists(buildPath))
+                                {
+                                    Logger.Warn(
+                                    $"Skipping \"{basename}\" because it does not have a corresponding build.bytes file.");
+                                    continue;
+                                }
+                            }
                         }
 
-                        var anim = new FileStream(animPath, FileMode.Open);
-                        var build = new FileStream(buildPath, FileMode.Open);
-
-                        var reader = new KanimReader(build, anim, png);
-                        try
-                        {
-                            reader.Read();
-                            var writer = new ScmlWriter(reader);
-                            writer.SaveToDir(Path.Join(o.OutputPath, reader.BuildData.Name));
-                        }
-                        catch (Exception e)
-                        {
-                            Logger.Error($"The following error occured while exporting \"{reader.BuildData.Name}\":");
-                            Logger.Error(e.ToString());
-                            Logger.Error("Skipping.");
-                            continue;
-                        }
-
-                        Logger.Info($"Exported \"{reader.BuildData.Name}\".");
+                        Interlocked.Increment(ref Counter);
+                        ThreadPool.QueueUserWorkItem(ConvertAnim, new ConversionData(filepath, animPath, buildPath, o.OutputPath));
                     }
+
+                    while (Counter > 0)
+                    {
+                        Thread.Sleep(100);
+                    }
+                    Logger.Info($"Finished exporting {Success} of {filepaths.Length} anims.");
                 });
         }
     }
